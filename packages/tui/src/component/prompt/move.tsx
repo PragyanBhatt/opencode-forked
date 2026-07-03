@@ -125,28 +125,8 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
     }
     setProgress("Moving session")
     try {
-      await sdk.client.experimental.controlPlane.moveSession(
-        {
-          sessionID,
-          destination: { directory },
-          moveChanges: choice === "yes",
-        },
-        { throwOnError: true },
-      )
-      await sdk.client.session
-        .promptAsync({
-          sessionID,
-          directory,
-          noReply: true,
-          parts: [
-            {
-              type: "text",
-              text: moveReminderText(directory),
-              synthetic: true,
-            },
-          ],
-        })
-        .catch(() => undefined)
+      await sdk.api.session.move({ sessionID, destination: { directory }, moveChanges: choice === "yes" })
+      await sdk.api.session.synthetic({ sessionID, text: moveReminderText(directory) }).catch(() => undefined)
       dialog.clear()
     } catch (error) {
       toast.error(error)
