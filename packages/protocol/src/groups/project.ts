@@ -1,3 +1,4 @@
+import { Location } from "@opencode-ai/schema/location"
 import { Project } from "@opencode-ai/schema/project"
 import { HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { LocationQuery, locationQueryOpenApi } from "./location.js"
@@ -23,7 +24,7 @@ export const ProjectGroup = HttpApiGroup.make("server.project")
     HttpApiEndpoint.get("project.directories", `${root}/:projectID/directories`, {
       params: { projectID: Project.ID },
       query: LocationQuery,
-      success: Project.Directories,
+      success: Location.response(Project.Directories),
     })
       .annotateMerge(locationQueryOpenApi)
       .annotateMerge(

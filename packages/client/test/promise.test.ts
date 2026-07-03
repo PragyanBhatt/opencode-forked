@@ -76,7 +76,11 @@ test("project methods use the public HTTP contract", async () => {
     fetch: async (input) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
       requests.push(url)
-      if (url.includes("/directories")) return Response.json([])
+      if (url.includes("/directories"))
+        return Response.json({
+          location: { directory: "/tmp/project", project: { id: "proj_test", directory: "/tmp/project" } },
+          data: [],
+        })
       return Response.json({ id: "proj_test", directory: "/tmp/project" })
     },
   })
@@ -88,7 +92,7 @@ test("project methods use the public HTTP contract", async () => {
   })
 
   expect(current).toEqual({ id: "proj_test", directory: "/tmp/project" })
-  expect(directories).toEqual([])
+  expect(directories.data).toEqual([])
   expect(requests).toEqual([
     "http://localhost:3000/api/project/current?location%5Bworkspace%5D=wrk_test",
     "http://localhost:3000/api/project/proj_test/directories?location%5Bdirectory%5D=%2Ftmp%2Fproject",

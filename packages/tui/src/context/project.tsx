@@ -52,7 +52,7 @@ export const { use: useProject, provider: ProjectProvider } = createSimpleContex
         )
         setStore("project", "id", project.id)
         setStore("project", "worktree", project.directory)
-        setStore("project", "mainDir", directories.findLast((item) => item.strategy === undefined)?.directory)
+        setStore("project", "mainDir", directories.data.findLast((item) => item.strategy === undefined)?.directory)
       })
     }
 

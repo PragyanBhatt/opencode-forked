@@ -3,6 +3,7 @@ import { Project } from "@opencode-ai/core/project"
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../api"
+import { response } from "../location"
 
 export const ProjectHandler = HttpApiBuilder.group(Api, "server.project", (handlers) =>
   handlers
@@ -12,6 +13,6 @@ export const ProjectHandler = HttpApiBuilder.group(Api, "server.project", (handl
       ),
     )
     .handle("project.directories", (ctx) =>
-      Project.Service.use((project) => project.directories({ projectID: ctx.params.projectID })),
+      response(Project.Service.use((project) => project.directories({ projectID: ctx.params.projectID }))),
     ),
 )

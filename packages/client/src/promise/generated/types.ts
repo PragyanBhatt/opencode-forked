@@ -2448,7 +2448,14 @@ export type ProjectDirectoriesInput = {
   }["location"]
 }
 
-export type ProjectDirectoriesOutput = ReadonlyArray<{ readonly directory: string; readonly strategy?: string }>
+export type ProjectDirectoriesOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: ReadonlyArray<{ readonly directory: string; readonly strategy?: string }>
+}
 
 export type FormListRequestsInput = {
   readonly location?: {

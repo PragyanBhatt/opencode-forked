@@ -23,7 +23,7 @@ import { DialogPrompt } from "../ui/dialog-prompt"
 import { Slug } from "@opencode-ai/core/util/slug"
 
 export type MoveSessionSelection = { type: "directory"; directory: string; subdirectory: boolean } | { type: "new"; name: string }
-type ProjectDirectory = ProjectDirectoriesOutput[number]
+type ProjectDirectory = ProjectDirectoriesOutput["data"][number]
 
 type DialogMoveSessionProps = {
   projectID: string
@@ -88,7 +88,7 @@ export function DialogMoveSession(props: DialogMoveSessionProps) {
           location,
         })
         setLoadError(undefined)
-        return directories
+        return directories.data
       } catch (error) {
         setLoadError(error)
         // An initial load with no data surfaces the inline error view below. A
