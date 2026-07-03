@@ -27,22 +27,18 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
   const [creatingDots, setCreatingDots] = createSignal(3)
   const [progress, setProgress] = createSignal<string>()
 
-  async function create(context?: string) {
+  async function create(name: string) {
     const projectID = input.projectID()
     if (!projectID) return
     setCreating(true)
     setProgress("Creating copy")
     try {
-      const generated = await sdk.client.experimental.projectCopy.generateName(
-        { projectID, context },
-        { throwOnError: true },
-      )
       const result = await sdk.api.projectCopy.create({
         projectID,
         location: { directory: project.instance.directory() || paths.cwd },
         strategy: "git_worktree",
         directory: path.join(paths.worktree, projectID.slice(0, 6)),
-        name: generated.data.name,
+        name,
       })
       const directory = result.directory
       if (!directory) throw new Error("No project copy directory returned")
@@ -98,26 +94,13 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
     ))
   }
 
-  function sessionContext(sessionID: string) {
-    const session = sync.session.get(sessionID)
-    const messages = (sync.data.message[sessionID] ?? [])
-      .slice(-6)
-      .map((message) =>
-        [
-          message.role + ":",
-          ...(sync.data.part[message.id] ?? []).flatMap((part) => (part.type === "text" ? [part.text] : [])),
-        ].join(" "),
-      )
-    return [session?.title, ...messages].filter(Boolean).join("\n") || undefined
-  }
-
   async function moveExistingSession(sessionID: string, selection: MoveSessionSelection) {
     const session = sync.session.get(sessionID)
     const status = await sdk.client.vcs.status({ directory: session?.directory }).catch(() => undefined)
     const choice = status?.data?.length ? await DialogWorkspaceFileChanges.show(dialog, status.data) : "no"
     if (!choice) return
     dialog.clear()
-    const directory = selection.type === "new" ? await create(sessionContext(sessionID)) : selection.directory
+    const directory = selection.type === "new" ? await create(selection.name) : selection.directory
     if (!directory) {
       setProgress(undefined)
       dialog.clear()
@@ -140,13 +123,13 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
   const pending = createMemo(() => Boolean(homeDestination?.destination()))
   const pendingNew = createMemo(() => homeDestination?.destination()?.type === "new")
 
-  async function getDirectory(context?: string) {
+  async function getDirectory() {
     const value = homeDestination?.destination()
     if (!value) return
     if (value.type === "directory") {
       return value.directory
     }
-    return await create(context)
+    return await create(value.name)
   }
 
   function startSubmit() {
