@@ -50,7 +50,14 @@ import { createFadeIn } from "../../util/signal"
 import { DialogSkill } from "../dialog-skill"
 import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
 import { useArgs } from "../../context/args"
-import { OPENCODE_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
+import {
+  OPENCODE_BASE_MODE,
+  useBindings,
+  useCommandShortcut,
+  useCommandSlashes,
+  useLeaderActive,
+  useOpencodeKeymap,
+} from "../../keymap"
 import { useTuiConfig } from "../../config"
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
@@ -172,6 +179,7 @@ export function Prompt(props: PromptProps) {
   const history = usePromptHistory()
   const stash = usePromptStash()
   const keymap = useOpencodeKeymap()
+  const slashCommands = useCommandSlashes()
   const agentShortcut = useCommandShortcut("agent.cycle")
   const paletteShortcut = useCommandShortcut("command.palette.show")
   const renderer = useRenderer()
@@ -587,7 +595,7 @@ export function Prompt(props: PromptProps) {
         category: "Session",
         slashName: "move",
         run: () => {
-          move.open()
+          void move.open()
         },
       },
     ].map((entry) => ({
@@ -965,6 +973,14 @@ export function Prompt(props: PromptProps) {
     }
   })
 
+  function localSlashCommand(value: string) {
+    const firstLine = value.split("\n")[0]?.trim()
+    if (!firstLine) return
+    const parts = firstLine.split(/\s+/)
+    if (parts.length !== 1) return
+    return slashCommands().find((command) => command.display === parts[0] || command.aliases?.includes(parts[0]))
+  }
+
   let submitting = false
   async function submit() {
     // Prevent overlapping invocations (e.g. a double-pressed Enter, or the
@@ -996,13 +1012,19 @@ export function Prompt(props: PromptProps) {
     if (workspace.creating() || move.creating()) return false
     if (auto()?.visible) return false
     if (!store.prompt.input) return false
-    const agent = local.agent.current()
-    if (!agent) return false
     const trimmed = store.prompt.input.trim()
     if (trimmed === "exit" || trimmed === "quit" || trimmed === ":q") {
       void exit()
       return true
     }
+    const localSlash = localSlashCommand(trimmed)
+    if (localSlash) {
+      clearPrompt()
+      localSlash.onSelect()
+      return true
+    }
+    const agent = local.agent.current()
+    if (!agent) return false
     const selectedModel = local.model.current()
     if (!selectedModel) {
       void promptModelWarning()

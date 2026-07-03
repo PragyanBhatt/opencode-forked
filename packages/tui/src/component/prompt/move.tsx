@@ -58,9 +58,17 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
     }
   }
 
-  function open() {
+  async function open() {
+    if (!input.projectID()) {
+      await project.sync().catch((error) => {
+        toast.show({ title: "Loading project failed", message: errorMessage(error), variant: "error" })
+      })
+    }
     const projectID = input.projectID()
-    if (!projectID) return
+    if (!projectID) {
+      toast.show({ message: "Project is still loading", variant: "error" })
+      return
+    }
     const sessionID = input.sessionID()
     const session = sessionID ? sync.session.get(sessionID) : undefined
     dialog.replace(() => (
