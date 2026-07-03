@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process"
+import { existsSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
@@ -9,6 +10,7 @@ const execFileAsync = promisify(execFile)
 const packageDir = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(packageDir, "../..")
 const signScript = path.join(rootDir, "script", "sign-windows.ps1")
+const portableRuntimeDir = path.join(packageDir, "portable-runtime")
 // The Electron 42 packaging update briefly installed Linux launchers/icons under
 // "opencode-desktop". Keep that hidden desktop entry around so existing GNOME/KDE
 // pins still resolve after the canonical app id changes back to ai.opencode.desktop.
@@ -38,6 +40,18 @@ const APP_IDS = {
   prod: "ai.opencode.desktop",
 } as const
 
+const portableRuntimeResources = portableRuntimeTargets().flatMap((name) => {
+  const from = path.join("portable-runtime", name)
+  if (!existsSync(path.join(packageDir, from))) return []
+  return [
+    {
+      from,
+      to: from,
+      filter: ["**/*"],
+    },
+  ]
+})
+
 const getBase = (appId: string): Configuration => ({
   artifactName: "opencode-desktop-${os}-${arch}.${ext}",
   directories: {
@@ -59,6 +73,7 @@ const getBase = (appId: string): Configuration => ({
       to: "native/",
       filter: ["index.js", "index.d.ts", "build/Release/mac_window.node", "swift-build/**"],
     },
+    ...portableRuntimeResources,
   ],
   mac: {
     category: "public.app-category.developer-tools",
@@ -144,3 +159,14 @@ function getConfig() {
 }
 
 export default getConfig()
+
+function portableRuntimeTargets() {
+  const requested = process.env.OPENCODE_DESKTOP_PACKAGE_RUNTIME
+  if (requested)
+    return requested
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+  if (!existsSync(portableRuntimeDir)) return []
+  return [`${process.platform}-${process.arch}`]
+}

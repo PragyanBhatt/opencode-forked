@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url"
 import { app, utilityProcess } from "electron"
 import type { Details } from "electron"
 import { getLogger } from "./logging"
+import { resolveDesktopRuntimeEnv } from "./portable-runtime"
 import { getUserShell, loadShellEnv } from "./shell-env"
 import { getStore } from "./store"
 import { DEFAULT_SERVER_URL_KEY } from "./store-keys"
@@ -50,6 +51,26 @@ export function preferAppEnv(userDataPath: string) {
     OPENCODE_CLIENT: "desktop",
     XDG_STATE_HOME: process.env.XDG_STATE_HOME ?? userDataPath,
   })
+  const runtime = resolveDesktopRuntimeEnv({
+    env: process.env,
+    resourcesPath: process.resourcesPath,
+    userDataPath,
+  })
+  if (runtime.mode === "isolated" && runtime.missing.length > 0) {
+    throw new Error(
+      `Desktop runtime mode '${process.env.OPENCODE_DESKTOP_RUNTIME_MODE ?? runtime.mode}' requires bundled ${runtime.missing.join(
+        " and ",
+      )} at ${runtime.runtimeDir}`,
+    )
+  }
+  Object.assign(process.env, runtime.env)
+  if (runtime.mode !== "system") {
+    getLogger().log("desktop runtime configured", {
+      mode: runtime.mode,
+      runtimeDir: runtime.runtimeDir,
+      missing: runtime.missing,
+    })
+  }
 }
 
 export async function spawnLocalServer(

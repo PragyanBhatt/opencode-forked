@@ -1,9 +1,11 @@
 import { sentryVitePlugin } from "@sentry/vite-plugin"
 import { defineConfig } from "electron-vite"
 import appPlugin from "@opencode-ai/app/vite"
-import * as fs from "node:fs/promises"
+import { copyFile, cp, mkdir, readdir, rm } from "node:fs/promises"
 
 const OPENCODE_SERVER_DIST = "../opencode/dist/node"
+const OPENCODE_SERVER_OUT = "./out/main/opencode-server"
+const JSONC_PACKAGE = "../opencode/node_modules/jsonc-parser"
 
 const channel = (() => {
   const raw = process.env.OPENCODE_CHANNEL
@@ -51,19 +53,20 @@ export default defineConfig({
         },
       },
       {
-        name: "opencode:virtual-server-module",
-        enforce: "pre",
-        resolveId(id) {
-          if (id === "virtual:opencode-server") return this.resolve(`${OPENCODE_SERVER_DIST}/node.js`)
-        },
-      },
-      {
         name: "opencode:copy-server-assets",
         async writeBundle() {
-          for (const l of await fs.readdir(OPENCODE_SERVER_DIST)) {
-            if (!l.endsWith(".wasm")) continue
-            await fs.writeFile(`./out/main/chunks/${l}`, await fs.readFile(`${OPENCODE_SERVER_DIST}/${l}`))
-          }
+          await rm(OPENCODE_SERVER_OUT, { recursive: true, force: true })
+          await mkdir(OPENCODE_SERVER_OUT, { recursive: true })
+          await Promise.all(
+            (await readdir(OPENCODE_SERVER_DIST))
+              .filter((file) => file === "node.js" || file.endsWith(".wasm"))
+              .map((file) => copyFile(`${OPENCODE_SERVER_DIST}/${file}`, `${OPENCODE_SERVER_OUT}/${file}`)),
+          )
+          await mkdir(`${OPENCODE_SERVER_OUT}/node_modules`, { recursive: true })
+          await cp(JSONC_PACKAGE, `${OPENCODE_SERVER_OUT}/node_modules/jsonc-parser`, {
+            dereference: true,
+            recursive: true,
+          })
         },
       },
     ],

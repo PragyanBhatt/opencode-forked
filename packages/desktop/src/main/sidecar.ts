@@ -1,5 +1,10 @@
 import * as http from "node:http"
+import { existsSync } from "node:fs"
+import { dirname, join } from "node:path"
 import * as tls from "node:tls"
+import { fileURLToPath, pathToFileURL } from "node:url"
+
+type ServerModule = typeof import("virtual:opencode-server")
 
 type NodeHttpWithEnvProxy = typeof http & {
   setGlobalProxyFromEnv: () => void
@@ -54,7 +59,7 @@ async function start(command: StartCommand) {
     ensureLoopbackNoProxy()
     useSystemCertificates()
     useEnvProxy()
-    const { Server } = await import("virtual:opencode-server")
+    const { Server } = await loadServerModule()
 
     listener = await Server.listen({
       port: command.port,
@@ -125,6 +130,16 @@ function useEnvProxy() {
   } catch (error) {
     console.warn("failed to load proxy environment", error)
   }
+}
+
+async function loadServerModule() {
+  return (await import(pathToFileURL(resolveServerModulePath()).href)) as ServerModule
+}
+
+function resolveServerModulePath() {
+  const packaged = join(dirname(fileURLToPath(import.meta.url)), "opencode-server", "node.js")
+  if (existsSync(packaged)) return packaged
+  return join(process.cwd(), "../opencode/dist/node/node.js")
 }
 
 function parseCommand(value: unknown): SidecarCommand | undefined {
