@@ -59,9 +59,14 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
 
   async function open() {
     if (!input.projectID()) {
-      await project.sync().catch((error) => {
+      const error = await project.sync().then(
+        () => undefined,
+        (error) => error,
+      )
+      if (error) {
         toast.show({ title: "Loading project failed", message: errorMessage(error), variant: "error" })
-      })
+        return
+      }
     }
     const projectID = input.projectID()
     if (!projectID) {
